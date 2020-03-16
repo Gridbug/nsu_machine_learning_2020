@@ -15,8 +15,12 @@ struct WaterPlantDataEntry {
     int32_t clusterId = 0;
 };
 
+const uint32_t maxNumIterations = 1000;
+const uint32_t numFeatures = 38;
+
 std::vector<std::vector<double>> initialCentroids(std::vector<WaterPlantDataEntry> data, int32_t hyperparameterK);
 double euclideanDistance(std::vector<double> a, std::vector<double> b);
+std::vector<std::vector<double>> computeCentroids(std::vector<WaterPlantDataEntry> data, int32_t hyperparameterK);
 
 int main(int argc, char* argv[]) {
     if (3 != argc) {
@@ -34,7 +38,6 @@ int main(int argc, char* argv[]) {
 
     QTextStream dataStream(&dataFile);
 
-    const uint32_t numFeatures = 38;
     std::vector<WaterPlantDataEntry> data;
 
     while (!dataStream.atEnd()) {
@@ -86,6 +89,38 @@ int main(int argc, char* argv[]) {
         dataEntry.clusterId = std::distance(distancesToCentroids.begin(), minIt);
     }
 
+    uint32_t i;
+    for (i = 0; i < maxNumIterations; i++) {
+        centroids = computeCentroids(data, hyperparameterK);
+
+        bool nothingChanged = true;
+
+        for (auto& dataEntry : data) {
+            std::vector<double> distancesToCentroids;
+
+            for (auto centroidFeatures : centroids) {
+                distancesToCentroids.push_back(euclideanDistance(dataEntry.features, centroidFeatures));
+            }
+
+            auto minIt = std::min_element(distancesToCentroids.begin(), distancesToCentroids.end());
+
+            auto newClusterId = std::distance(distancesToCentroids.begin(), minIt);
+
+            if (newClusterId == dataEntry.clusterId) {
+                continue;
+            }
+
+            dataEntry.clusterId = newClusterId;
+            nothingChanged = false;
+        }
+
+        if (nothingChanged) {
+            break;
+        }
+    }
+
+    std::cout << "INFO: Total number of iterations == " << i << std::endl;
+
     return 0;
 }
 
@@ -107,4 +142,33 @@ double euclideanDistance(std::vector<double> a, std::vector<double> b) {
     }
 
     return sqrt(distance);
+}
+
+std::vector<std::vector<double>> computeCentroids(std::vector<WaterPlantDataEntry> data, int32_t hyperparameterK) {
+    std::vector<std::vector<double>> newCentroids(hyperparameterK);
+    for (int32_t i = 0; i < hyperparameterK; i++) {
+        newCentroids[i] = std::vector<double>(numFeatures, 0);
+    }
+
+    std::vector<uint32_t> numEntriesInCluster(hyperparameterK, 0);
+
+    for (auto dataEntry : data) {
+        numEntriesInCluster[dataEntry.clusterId]++;
+
+        for (uint32_t featureId = 0; featureId < numFeatures; featureId++) {
+            newCentroids[dataEntry.clusterId][featureId] += dataEntry.features[featureId];
+        }
+    }
+
+    for (int32_t clusterId = 0; clusterId < hyperparameterK; clusterId++) {
+        if (numEntriesInCluster[clusterId] == 0) {
+            continue;
+        }
+
+        for (int32_t i = 0; i < hyperparameterK; i++) {
+            newCentroids[clusterId][i] /= numEntriesInCluster[clusterId];
+        }
+    }
+
+    return newCentroids;
 }
