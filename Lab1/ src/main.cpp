@@ -121,6 +121,20 @@ int main(int argc, char* argv[]) {
 
     std::cout << "INFO: Total number of iterations == " << i << std::endl;
 
+    QFile outputFile("clustering_results");
+
+    outputFile.open(QFile::WriteOnly);
+    if (!outputFile.isOpen()) {
+        std::cerr << "ERROR: Failed to open output file \"" << "clustering_results" << "\"" << std::endl;
+        return -1;
+    }
+
+    QTextStream resultsStream(&outputFile);
+
+    for (auto dataEntry : data) {
+        resultsStream << QString::fromStdString(dataEntry.day) << "," << dataEntry.clusterId << "\n";
+    }
+
     return 0;
 }
 
@@ -128,7 +142,7 @@ std::vector<std::vector<double>> initialCentroids(std::vector<WaterPlantDataEntr
     std::vector<std::vector<double>> centroids(hyperparameterK);
 
     for (int32_t i = 0; i < hyperparameterK; i++) {
-        centroids[i] = data[i].features;
+        centroids[i] = data[i + 200].features;
     }
 
     return centroids;
