@@ -2,6 +2,7 @@
 #include <vector>
 #include <algorithm>
 #include <cmath>
+#include <set>
 
 #include <QDataStream>
 #include <QFile>
@@ -15,10 +16,11 @@ struct WaterPlantDataEntry {
     int32_t clusterId = 0;
 };
 
-const uint32_t maxNumIterations = 1000;
+const uint32_t maxNumIterations = 100;
 const uint32_t numFeatures = 38;
 
 std::vector<std::vector<double>> initialCentroids(std::vector<WaterPlantDataEntry> data, int32_t hyperparameterK);
+std::vector<std::vector<double>> randInitialCentroids(std::vector<WaterPlantDataEntry> data, int32_t hyperparameterK);
 double euclideanDistance(std::vector<double> a, std::vector<double> b);
 std::vector<std::vector<double>> computeCentroids(std::vector<WaterPlantDataEntry> data, int32_t hyperparameterK);
 
@@ -66,6 +68,8 @@ int main(int argc, char* argv[]) {
 
     dataFile.close();
 
+    srand(time(nullptr));
+
     if (data.empty()) {
         std::cerr << "ERROR: Not found any data in file \"" << argv[1] << "\"" << std::endl;
         return -1;
@@ -75,7 +79,7 @@ int main(int argc, char* argv[]) {
 
     const uint32_t hyperparameterK = std::stoi(argv[2]);
 
-    std::vector<std::vector<double>> centroids = initialCentroids(data, hyperparameterK);
+    std::vector<std::vector<double>> centroids = randInitialCentroids(data, hyperparameterK);
 
     for (auto& dataEntry : data) {
         std::vector<double> distancesToCentroids;
@@ -133,6 +137,7 @@ int main(int argc, char* argv[]) {
 
     for (auto dataEntry : data) {
         resultsStream << QString::fromStdString(dataEntry.day) << "," << dataEntry.clusterId << "\n";
+        std::cout << dataEntry.day << "," << dataEntry.clusterId << "\n";
     }
 
     return 0;
@@ -142,7 +147,31 @@ std::vector<std::vector<double>> initialCentroids(std::vector<WaterPlantDataEntr
     std::vector<std::vector<double>> centroids(hyperparameterK);
 
     for (int32_t i = 0; i < hyperparameterK; i++) {
-        centroids[i] = data[i + 200].features;
+
+        centroids[i] = data[i].features;
+    }
+
+    return centroids;
+}
+
+std::vector<std::vector<double>> randInitialCentroids(std::vector<WaterPlantDataEntry> data, int32_t hyperparameterK) {
+    std::set<int32_t> entryIds;
+
+    for (int32_t i = 0; i < hyperparameterK; i++) {
+        int32_t newNumber = rand() % data.size();
+
+        while (entryIds.find(newNumber) != entryIds.end()) {
+            newNumber = rand() % data.size();
+        }
+
+        entryIds.insert(newNumber);
+    }
+
+    std::vector<std::vector<double>> centroids(hyperparameterK);
+
+    for (int32_t i = 0; i < hyperparameterK; i++) {
+
+        centroids[i] = data[*(std::next(entryIds.begin(), i))].features;
     }
 
     return centroids;
@@ -155,7 +184,7 @@ double euclideanDistance(std::vector<double> a, std::vector<double> b) {
         distance += pow(a[featureId] - b[featureId], 2);
     }
 
-    return sqrt(distance);
+    return distance;
 }
 
 std::vector<std::vector<double>> computeCentroids(std::vector<WaterPlantDataEntry> data, int32_t hyperparameterK) {
