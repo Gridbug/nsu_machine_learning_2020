@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cmath>
 #include <set>
+#include <limits>
 
 #include <QDataStream>
 #include <QFile>
@@ -23,6 +24,8 @@ std::vector<std::vector<double>> initialCentroids(std::vector<WaterPlantDataEntr
 std::vector<std::vector<double>> randInitialCentroids(std::vector<WaterPlantDataEntry> data, int32_t hyperparameterK);
 double euclideanDistance(std::vector<double> a, std::vector<double> b);
 std::vector<std::vector<double>> computeCentroids(std::vector<WaterPlantDataEntry> data, int32_t hyperparameterK);
+void fixMissingData(std::vector<WaterPlantDataEntry>& data);
+void dataNormalization(std::vector<WaterPlantDataEntry>& data);
 
 int main(int argc, char* argv[]) {
     if (3 != argc) {
@@ -60,13 +63,23 @@ int main(int argc, char* argv[]) {
                        splittedLine.end(),
                        std::back_inserter(numericalData),
                        [] (QString dataStr) {
-                            return dataStr.toDouble();
+                            bool status = true;
+                            double convertedValue = dataStr.toDouble(&status);
+                            if (status) {
+                                return convertedValue;
+                            } else {
+                                return std::numeric_limits<double>::quiet_NaN();
+                            }
                        });
 
         data.push_back({splittedLine.first().toStdString(), numericalData});
     }
 
     dataFile.close();
+
+    fixMissingData(data);
+
+    dataNormalization(data);
 
     srand(time(nullptr));
 
@@ -137,7 +150,7 @@ int main(int argc, char* argv[]) {
 
     for (auto dataEntry : data) {
         resultsStream << QString::fromStdString(dataEntry.day) << "," << dataEntry.clusterId << "\n";
-        std::cout << dataEntry.day << "," << dataEntry.clusterId << "\n";
+//        std::cout << dataEntry.day << "," << dataEntry.clusterId << "\n";
     }
 
     return 0;
@@ -184,7 +197,7 @@ double euclideanDistance(std::vector<double> a, std::vector<double> b) {
         distance += pow(a[featureId] - b[featureId], 2);
     }
 
-    return distance;
+    return sqrt(distance);
 }
 
 std::vector<std::vector<double>> computeCentroids(std::vector<WaterPlantDataEntry> data, int32_t hyperparameterK) {
@@ -214,4 +227,52 @@ std::vector<std::vector<double>> computeCentroids(std::vector<WaterPlantDataEntr
     }
 
     return newCentroids;
+}
+
+void fixMissingData(std::vector<WaterPlantDataEntry>& data) {
+    std::vector<double> featureMeanValues(numFeatures, 0);
+
+    for (auto dataEntry : data) {
+        for (uint32_t i = 0; i < numFeatures; i++) {
+            if (!isnanl(dataEntry.features[i])) {
+                featureMeanValues[i] += dataEntry.features[i];
+            }
+        }
+    }
+
+    if (data.empty()) return;
+
+    for (uint32_t i = 0; i < numFeatures; i++) {
+            featureMeanValues[i] /= data.size();
+    }
+
+    for (auto& dataEntry : data) {
+        for (uint32_t i = 0; i < numFeatures; i++) {
+            if (isnanl(dataEntry.features[i])) {
+                dataEntry.features[i] = featureMeanValues[i];
+            }
+        }
+    }
+}
+
+void dataNormalization(std::vector<WaterPlantDataEntry>& data) {
+    std::vector<double> featureMinValues(numFeatures, std::numeric_limits<double>::max());
+    std::vector<double> featureMaxValues(numFeatures, std::numeric_limits<double>::lowest());
+
+    for (auto dataEntry : data) {
+        for (uint32_t i = 0; i < numFeatures; i++) {
+            if (dataEntry.features[i] < featureMinValues[i]) {
+                featureMinValues[i] = dataEntry.features[i];
+            }
+            if (dataEntry.features[i] > featureMaxValues[i]) {
+                featureMaxValues[i] = dataEntry.features[i];
+            }
+        }
+    }
+
+    for (auto& dataEntry : data) {
+        for (uint32_t i = 0; i < numFeatures; i++) {
+            dataEntry.features[i] = (dataEntry.features[i] - featureMinValues[i]) / (featureMaxValues[i] - featureMinValues[i]);
+        }
+    }
 }
