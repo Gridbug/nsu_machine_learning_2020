@@ -221,7 +221,7 @@ std::vector<std::vector<double>> computeCentroids(std::vector<WaterPlantDataEntr
             continue;
         }
 
-        for (int32_t i = 0; i < hyperparameterK; i++) {
+        for (uint32_t i = 0; i < numFeatures; i++) {
             newCentroids[clusterId][i] /= numEntriesInCluster[clusterId];
         }
     }
