@@ -1,3 +1,5 @@
+#pragma()
+
 #include <iostream>
 #include <vector>
 #include <algorithm>
@@ -89,6 +91,12 @@ int main(int argc, char* argv[]) {
         dataEntry.clusterId = std::distance(distancesToCentroids.begin(), minIt);
     }
 
+    std::vector<uint32_t> numEntriesInCluster(hyperparameterK, 0);
+
+    for (auto dataEntry : data) {
+        numEntriesInCluster[dataEntry.clusterId]++;
+    }
+
     uint32_t i;
     for (i = 0; i < maxNumIterations; i++) {
         centroids = computeCentroids(data, hyperparameterK);
@@ -142,7 +150,7 @@ std::vector<std::vector<double>> initialCentroids(std::vector<WaterPlantDataEntr
     std::vector<std::vector<double>> centroids(hyperparameterK);
 
     for (int32_t i = 0; i < hyperparameterK; i++) {
-        centroids[i] = data[i + 200].features;
+        centroids[i] = data[i].features;
     }
 
     return centroids;
