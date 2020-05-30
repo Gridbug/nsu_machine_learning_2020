@@ -149,7 +149,7 @@ int main(int argc, char* argv[]) {
     QTextStream resultsStream(&outputFile);
 
     for (auto dataEntry : data) {
-        resultsStream << QString::fromStdString(dataEntry.day) << "," << dataEntry.clusterId << "\n";
+        resultsStream << QString::fromStdString(dataEntry.day) << "," << dataEntry.clusterId + 1 << "\n";
 //        std::cout << dataEntry.day << "," << dataEntry.clusterId << "\n";
     }
 
@@ -234,7 +234,7 @@ void fixMissingData(std::vector<WaterPlantDataEntry>& data) {
 
     for (auto dataEntry : data) {
         for (uint32_t i = 0; i < numFeatures; i++) {
-            if (!isnanl(dataEntry.features[i])) {
+            if (!isnan(dataEntry.features[i])) {
                 featureMeanValues[i] += dataEntry.features[i];
             }
         }
@@ -248,7 +248,7 @@ void fixMissingData(std::vector<WaterPlantDataEntry>& data) {
 
     for (auto& dataEntry : data) {
         for (uint32_t i = 0; i < numFeatures; i++) {
-            if (isnanl(dataEntry.features[i])) {
+            if (isnan(dataEntry.features[i])) {
                 dataEntry.features[i] = featureMeanValues[i];
             }
         }
